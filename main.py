@@ -24,7 +24,7 @@ class Network(Model):
     def __init__(self, numMiners, maxHashRatePerMiner, initialReward, intialCurrencyValueWrtFiat):
         self.numMiners = numMiners        
         self.reward = initialReward # e.g. BTC
-        self.currencyValueWrtFiat = intialCurrencyValueWrtFiat # e.g. Euro        
+        self.currencyValueWrtFiat = intialCurrencyValueWrtFiat # e.g. Euro 
         self.totalHashRate = 0 # H/s
         self.decentralizationIndex = 0
         self.schedule = BaseScheduler(self)
@@ -36,6 +36,7 @@ class Network(Model):
             #if i == 0:
             #    hashRate *= 1   
             self.totalHashRate += hashRate
+            # TODO randomize policies
             a = Miner(i, hashRate, self)
             self.schedule.add(a)
         
@@ -86,6 +87,7 @@ maxHashRatePerMiner = 100
 initialReward = 1
 intialCurrencyValueWrtFiat = 1
 steps = 4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
+random.seed(1) # set the random seed in order to make an experiment repeatable
 network = Network(numMiners, maxHashRatePerMiner, initialReward, intialCurrencyValueWrtFiat)
 for i in range(steps):
     network.step()
