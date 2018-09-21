@@ -3,6 +3,7 @@ from mesa.time import BaseScheduler
 from mesa.datacollection import DataCollector
 import random
 import numpy as np
+import pysal
 #import matplotlib.pyplot as plt
 
 class Miner(Agent):
@@ -30,7 +31,10 @@ class Network(Model):
         
         # Create miners
         for i in range(self.numMiners):
-            hashRate = random.randrange(100)
+            hashRate = random.randrange(maxHashRate)
+            # superMiner could have much more hashRate with respect to others
+            #if i == 0:
+            #    hashRate *= 10   
             self.totalHashRate += hashRate
             a = Miner(i, hashRate, self)
             self.schedule.add(a)
@@ -47,9 +51,12 @@ class Network(Model):
         self.schedule.agents[winningMinerIndex].reward += self.reward
         
     def updateDecentralizationIndex(self):
-        # TODO: self.decentralizationIndex = ...
         print('update decentralizationIndex')
-        pass
+        hashRates = list(map(lambda a: a.hashRate, network.schedule.agents))
+        # as a decentralizationIndex 1 - gini indix is used
+        # the higher it is, the more the hashRate is distributed equally among miners 
+        self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
+        print(self.decentralizationIndex)         
                 
     def step(self):
         print('network before powPuzzle')               
@@ -64,7 +71,7 @@ class Network(Model):
 numMiners = 10
 maxHashRate = 100
 initialReward = 1
-steps = 10     
+steps = 100     
 network = Network(numMiners, maxHashRate, initialReward)
 for i in range(steps):
     network.step()
@@ -79,5 +86,4 @@ for i in range(numMiners):
 # Plot reward of each miner at the end of the simulation
 endMinersRewards = minersRewards.xs(steps - 1, level="Step")["reward"]
 endMinersRewards.plot()
-
 
