@@ -1,5 +1,5 @@
 from mesa import Agent, Model
-from mesa.time import BaseScheduler
+from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 import random
 import numpy as np
@@ -14,7 +14,14 @@ class Miner(Agent):
         self.hashCost = 12e-13 # e.g. Euro/H
         self.reward = 0 # e.g. BTC
         self.cost = 0 # e.g. Euro
-        self.decentralizationIndexOtherMiners = 0
+        # decentralizationIndexOn is the decentralizationIndex of the network
+        # if this miner is on. In case this miner is already on, then it is equal to 
+        # decentralizationIndex
+        self.decentralizationIndexOn = 0
+        # decentralizationIndexOff is the decentralizationIndex of the network
+        # if this miner is off. In case this miner is already off, then it is equal to 
+        # decentralizationIndex
+        self.decentralizationIndexOff = 0
         
     def start(self):
         print("Miner ", self.unique_id, ' start.')
@@ -26,34 +33,37 @@ class Miner(Agent):
         self.hashRate = 0
         input("Press Enter to continue...\n")
         
-#    def computeDecentralizationIndexOtherMiners(self):
-#        otherMiners = list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))
-#        if len(otherMiners) > 0:
-#            hashRates = list(map(lambda a: a.hashRate, otherMiners))
-#            # as a decentralizationIndex 1 - gini indix is used
-#            # the higher it is, the more the hashRate is distributed equally among miners 
-#            self.decentralizationIndexOtherMiners = 1 - pysal.inequality.gini.Gini(hashRates).g
-#            print(hashRates)            
-#        else:
-#            print('Miner ', self.unique_id,' is the only one.')
-#            input("Press Enter to continue...")
+    def computeDecentralizationIndexOnOff(self):
+        otherMiners = list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))
+        if len(otherMiners) > 0:
+            hashRatesOff = list(map(lambda a: a.hashRate, otherMiners))
+            self.decentralizationIndexOff = 1 - pysal.inequality.gini.Gini(hashRatesOff).g
+            print(hashRatesOff)  
+                   
+            hashRatesOn = hashRatesOff + [self.maxHashRate]
+            self.decentralizationIndexOn = 1 - pysal.inequality.gini.Gini(hashRatesOn).g              
+        else:
+            print('Miner ', self.unique_id,' is the only one.')
+            input("Press Enter to continue...")
               
     def step(self):
         # Init or update decentralization index other miners
-        # Note that if this index is used step of the miners should be executed at the same time
-        #self.computeDecentralizationIndexOtherMiners()  
+        self.computeDecentralizationIndexOnOff()  
         
         # Pay energy to compute hash
         self.cost += self.hashRate * 10 * 60 * self.hashCost 
 
-        print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, '\n')
+        # Here all data to selected a policy are computed
+        print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',decentralizationIndexOn:',  self.decentralizationIndexOn, ',decentralizationIndexOff:',  self.decentralizationIndexOff,'\n')
+                
         
-        # TODO: implement here miner policies taking into consideration decentralizationIndex        
-        if (self.hashRate == 0 and self.model.decentralizationIndex >= 0.6):
+    def advance(self):
+        # Miners' policies are executed "at the same time"
+        # Each miner does not selected a policy taking into consideration the policies selected by others
+        if (self.hashRate == 0 and self.decentralizationIndexOn >= 0.6):
             self.start()
-        elif (self.hashRate > 0 and self.model.decentralizationIndex < 0.6):
+        elif (self.hashRate > 0 and self.model.decentralizationIndex < 0.6 and self.decentralizationIndexOff < 0.6):
             self.stop()
-        
         
 class Network(Model):
     def __init__(self, superMiner, numMiners, technologicalMaximumHashRate, initialReward):
@@ -61,7 +71,7 @@ class Network(Model):
         self.reward = initialReward # e.g. BTC
         self.totalHashRate = 0 # H/s
         self.decentralizationIndex = 0
-        self.schedule = BaseScheduler(self)
+        self.schedule = SimultaneousActivation(self)
                 
         # Add super miner to scheduler
         self.schedule.add(superMiner(self))
@@ -96,7 +106,6 @@ class Network(Model):
         hashRates = list(map(lambda a: a.hashRate, activeMiners))   
         # as a decentralizationIndex 1 - gini indix is used
         # the higher it is, the more the hashRate is distributed equally among miners 
-        # TODO find a better index
         self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
         print(self.decentralizationIndex)
 
@@ -104,8 +113,7 @@ class Network(Model):
          self.totalHashRate = sum(list(map(lambda a: a.hashRate, self.schedule.agents)))
                 
     def step(self):
-        print('network before powPuzzle')               
-        # TODO: update here the reward     
+        print('network before powPuzzle')                 
         self.datacollector.collect(self)
         self.powPuzzle()       
         self.schedule.step()
@@ -119,9 +127,9 @@ class Network(Model):
 numMiners = 10
 technologicalMaximumHashRate = 20e6
 initialReward = 12.5
-steps = 2 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
+steps = 3 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
 random.seed(1) # set the random seed in order to make an experiment repeatable
-k = 2 # hash rate multiplier available to super miner
+k = 4 # hash rate multiplier available to super miner
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
