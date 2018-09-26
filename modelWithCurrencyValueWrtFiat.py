@@ -22,12 +22,12 @@ class Miner(Agent):
         return expectedReward - cost
         
     def start(self):
-        print("Miner ", self.unique_id, ' start.')
+        #print("Miner ", self.unique_id, ' start.')
         self.hashRate = self.maxHashRate
         #input("Press Enter to continue...")
         
     def stop(self):
-        print("Miner ", self.unique_id, ' stop.')
+        #print("Miner ", self.unique_id, ' stop.')
         self.hashRate = 0
         #input("Press Enter to continue...")
               
@@ -134,4 +134,5 @@ for i in range(numMiners):
 # Plot reward of each miner at the end of the simulation
 endMinersRewards = minersRewards.xs(steps - 1, level="Step")["reward"]
 endMinersRewards.plot()
+
 
