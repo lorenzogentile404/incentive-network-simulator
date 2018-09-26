@@ -14,37 +14,33 @@ class Miner(Agent):
         self.hashCost = 12e-13 # e.g. Euro/H
         self.reward = 0 # e.g. BTC
         self.cost = 0 # e.g. Euro
-        # decentralizationIndexOn is the decentralizationIndex of the network
+        # DecentralizationIndexOn is the decentralizationIndex of the network
         # if this miner is on. In case this miner is already on, then it is equal to 
         # decentralizationIndex
         self.decentralizationIndexOn = 0
-        # decentralizationIndexOff is the decentralizationIndex of the network
+        # DecentralizationIndexOff is the decentralizationIndex of the network
         # if this miner is off. In case this miner is already off, then it is equal to 
         # decentralizationIndex
         self.decentralizationIndexOff = 0
         
     def start(self):
-        print("Miner ", self.unique_id, ' start.')
         self.hashRate = self.maxHashRate
-        input("Press Enter to continue...\n")
+        input("Miner " + str(self.unique_id) + ' start...\n')
         
     def stop(self):
-        print("Miner ", self.unique_id, ' stop.')
         self.hashRate = 0
-        input("Press Enter to continue...\n")
+        input("Miner " + str(self.unique_id) + ' stop...\n')
         
     def computeDecentralizationIndexOnOff(self):
         otherMiners = list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))
         if len(otherMiners) > 0:
             hashRatesOff = list(map(lambda a: a.hashRate, otherMiners))
-            self.decentralizationIndexOff = 1 - pysal.inequality.gini.Gini(hashRatesOff).g
-            print(hashRatesOff)  
+            self.decentralizationIndexOff = 1 - pysal.inequality.gini.Gini(hashRatesOff).g 
                    
             hashRatesOn = hashRatesOff + [self.maxHashRate]
             self.decentralizationIndexOn = 1 - pysal.inequality.gini.Gini(hashRatesOn).g              
         else:
-            print('Miner ', self.unique_id,' is the only one.')
-            input("Press Enter to continue...")
+            input('Miner ' + str(self.unique_id) + ' is the only one...\n')
               
     def step(self):
         # Init or update decentralization index other miners
@@ -56,13 +52,12 @@ class Miner(Agent):
         # Here all data to selected a policy are computed
         print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',decentralizationIndexOn:',  self.decentralizationIndexOn, ',decentralizationIndexOff:',  self.decentralizationIndexOff,'\n')
                 
-        
     def advance(self):
         # Miners' policies are executed "at the same time"
         # Each miner does not selected a policy taking into consideration the policies selected by others
         if (self.hashRate == 0 and self.decentralizationIndexOn >= 0.6):
             self.start()
-        elif (self.hashRate > 0 and self.model.decentralizationIndex < 0.6 and self.decentralizationIndexOff < 0.6):
+        elif (self.hashRate > 0 and (self.model.decentralizationIndex < 0.6 and self.decentralizationIndexOff < 0.6 or len(list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))) == 0)):
             self.stop()
         
 class Network(Model):
@@ -90,7 +85,7 @@ class Network(Model):
         self.computeTotalHashRate()         
             
         # Declare data that have to be collected            
-        self.datacollector = DataCollector(agent_reporters={"reward": "reward"})
+        self.datacollector = DataCollector(agent_reporters={"reward": "reward", "hashRate":"hashRate"})
     
     def powPuzzle(self):
         # Compute probability to solve pow for each miner        
@@ -100,24 +95,23 @@ class Network(Model):
         # Reward the winning miner        
         self.schedule.agents[winningMinerIndex].reward += self.reward
         
-    def computeDecentralizationIndex(self):
-        print('compute decentralizationIndex')    
+    def computeDecentralizationIndex(self):    
         activeMiners = list(filter(lambda a: a.hashRate > 0, self.schedule.agents))          
         hashRates = list(map(lambda a: a.hashRate, activeMiners))   
-        # as a decentralizationIndex 1 - gini indix is used
+        # As a decentralizationIndex 1 - gini indix is used
         # the higher it is, the more the hashRate is distributed equally among miners 
         self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
-        print(self.decentralizationIndex)
+        print('### Decentralization index: ', self.decentralizationIndex, '\n')
 
     def computeTotalHashRate(self):
          self.totalHashRate = sum(list(map(lambda a: a.hashRate, self.schedule.agents)))
                 
     def step(self):
-        print('network before powPuzzle')                 
+        # Network before powPuzzle                 
         self.datacollector.collect(self)
         self.powPuzzle()       
         self.schedule.step()
-        print('network after powPuzzle, miner may have changed strategy')
+        # Network after powPuzzle, miner may have changed strategy
         # Update totalHashRate
         self.computeTotalHashRate()
         # Update decentralization index after streategies of miners may have changed               
@@ -127,18 +121,26 @@ class Network(Model):
 numMiners = 10
 technologicalMaximumHashRate = 20e6
 initialReward = 12.5
-steps = 3 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
+steps = 10 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
 random.seed(1) # set the random seed in order to make an experiment repeatable
-k = 4 # hash rate multiplier available to super miner
+k = 2.5 # hash rate multiplier available to super miner
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
 network = Network(superMiner, numMiners, technologicalMaximumHashRate, initialReward)
 for i in range(steps):
-    print('### Step ', i, '\n')
+    input('Step ' + str(i) + '...\n')
     network.step()
+    # Print active miners
+    print('Active miners: ', str(list(map(lambda a: a.unique_id, list(filter(lambda a: a.hashRate > 0, network.schedule.agents))))))
     if network.totalHashRate == 0:
         print('There is no more hash rate in the network.')
         break
 
+# Plot data regarding miners using datacollector
+minersHashRates = network.datacollector.get_agent_vars_dataframe()
+# Plot hashRate of each miner for each step
+for i in range(numMiners):
+    oneMinerHashRate = minersHashRates.xs(i, level="AgentID")
+    oneMinerHashRate.hashRate.plot()
 
