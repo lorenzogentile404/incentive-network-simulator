@@ -28,6 +28,8 @@ class Miner(Agent):
         # if this miner is off. In case this miner is already off, then it is equal to 
         # decentralizationIndex
         self.decentralizationIndexOff = 0
+        self.profit = 0 # Euro
+        self.expectedProfitPerBlock = 0 # Euro
         
     def start(self):
         self.hashRate = self.maxHashRate
@@ -37,39 +39,51 @@ class Miner(Agent):
         self.hashRate = 0
         input("Miner " + str(self.unique_id) + ' stop...\n')
         
-    def computeDecentralizationIndexOnOff(self):
-        otherMiners = list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))
-        if len(otherMiners) > 0:
-            hashRatesOff = list(map(lambda a: a.hashRate, otherMiners))
-            self.decentralizationIndexOff = 1 - pysal.inequality.gini.Gini(hashRatesOff).g 
-                   
-            hashRatesOn = hashRatesOff + [self.maxHashRate]
-            self.decentralizationIndexOn = 1 - pysal.inequality.gini.Gini(hashRatesOn).g              
-        else:
-            input('Miner ' + str(self.unique_id) + ' is the only one...\n')
-              
+#    def computeDecentralizationIndexOnOff(self):
+#        otherMiners = list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))
+#        if len(otherMiners) > 0:
+#            hashRatesOff = list(map(lambda a: a.hashRate, otherMiners))
+#            self.decentralizationIndexOff = 1 - pysal.inequality.gini.Gini(hashRatesOff).g 
+#                   
+#            hashRatesOn = hashRatesOff + [self.maxHashRate]
+#            self.decentralizationIndexOn = 1 - pysal.inequality.gini.Gini(hashRatesOn).g              
+#        else:
+#            input('Miner ' + str(self.unique_id) + ' is the only one...\n')
+    
+    def computeExpectedProfitPerBlock(self):
+        expectedRewardPerBlock = self.hashRate/self.model.totalHashRate*self.model.reward*self.model.currencyValueWrtFiat
+        costPerBlock = self.hashRate * 10 * 60 * self.hashCost 
+        self.expectedProfitPerBlock =  expectedRewardPerBlock - costPerBlock
+                     
     def step(self):
         # Init or update decentralization index other miners
-        self.computeDecentralizationIndexOnOff()  
+        #self.computeDecentralizationIndexOnOff()  
+    
+        # Init or update expectedProfit
+        self.computeExpectedProfitPerBlock()
         
         # Pay energy to compute hash
         self.cost += self.hashRate * 10 * 60 * self.hashCost 
+        
+        # Compute profit
+        self.profit = self.reward * self.model.currencyValueWrtFiat - self.cost
 
         # Here all data to selected a policy are computed
-        print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',decentralizationIndexOn:',  self.decentralizationIndexOn, ',decentralizationIndexOff:',  self.decentralizationIndexOff,'\n')
+        print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',profit:', self.profit, ',expectedProfitPerBlock:', self.expectedProfitPerBlock, ',decentralizationIndexOn:',  self.decentralizationIndexOn, ',decentralizationIndexOff:',  self.decentralizationIndexOff,'\n')
                 
     def advance(self):
         # Miners' policies are executed "at the same time"
         # Each miner does not selected a policy taking into consideration the policies selected by others
-        if (self.hashRate == 0 and self.decentralizationIndexOn >= 0.6):
+        if (self.hashRate == 0 and self.expectedProfitPerBlock > 0):
             self.start()
-        elif (self.hashRate > 0 and (self.model.decentralizationIndex < 0.6 and self.decentralizationIndexOff < 0.6 or len(list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))) == 0)):
+        elif (self.hashRate > 0 and (self.expectedProfitPerBlock  <= 0 or len(list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))) == 0)):
             self.stop()
         
 class Network(Model):
-    def __init__(self, superMiner, numMiners, technologicalMaximumHashRate, initialReward):
+    def __init__(self, superMiner, numMiners, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat):
         self.numMiners = numMiners        
         self.reward = initialReward # e.g. BTC
+        self.currencyValueWrtFiat = initialCurrencyValueWrtFiat # e.g. Euro/BTC 
         self.totalHashRate = 0 # H/s
         self.decentralizationIndex = 0
         self.schedule = SimultaneousActivation(self)
@@ -98,7 +112,10 @@ class Network(Model):
         # Select the winning miner        
         winningMinerIndex = np.random.choice(self.numMiners, 1, p = probabilityToSolvePowForEachMiner)
         # Reward the winning miner        
-        self.schedule.agents[winningMinerIndex].reward += self.reward
+        self.schedule.agents[winningMinerIndex].reward += self.reward    
+    
+    def computeTotalHashRate(self):
+         self.totalHashRate = sum(list(map(lambda a: a.hashRate, self.schedule.agents)))
         
     def computeDecentralizationIndex(self):    
         activeMiners = list(filter(lambda a: a.hashRate > 0, self.schedule.agents))          
@@ -107,9 +124,9 @@ class Network(Model):
         # the higher it is, the more the hashRate is distributed equally among miners 
         self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
         print('### Decentralization index: ', self.decentralizationIndex, '\n')
-
-    def computeTotalHashRate(self):
-         self.totalHashRate = sum(list(map(lambda a: a.hashRate, self.schedule.agents)))
+        
+#     def computeCurrencyValueWrtFiat(self): 
+#         pass
                 
     def step(self):
         # Network before powPuzzle                 
@@ -120,19 +137,24 @@ class Network(Model):
         # Update totalHashRate
         self.computeTotalHashRate()
         # Update decentralization index after streategies of miners may have changed               
-        self.computeDecentralizationIndex()       
+        self.computeDecentralizationIndex()
+        # TODO Update currency value with respect to fiat
+        # self.computeCurrencyValueWrtFiat()
+
+        
 
 # Run the simulation
 numMiners = 10
 technologicalMaximumHashRate = 20e6
 initialReward = 12.5
+initialCurrencyValueWrtFiat = 0.1 # Euro
 steps = 10 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
-random.seed(1) # set the random seed in order to make an experiment repeatable
+np.random.seed(1) # set the random seed in order to make an experiment repeatable
 k = 10 # hash rate multiplier available to super miner
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
-network = Network(superMiner, numMiners, technologicalMaximumHashRate, initialReward)
+network = Network(superMiner, numMiners, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat)
 for i in range(steps):
     input('Step ' + str(i) + '...\n')
     network.step()
