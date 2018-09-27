@@ -7,11 +7,17 @@ import pysal
 #import matplotlib.pyplot as plt
 
 class Miner(Agent):
-    def __init__(self, unique_id, maxHashRate, model):
+    def __init__(self, unique_id, technologicalMaximumHashRate, model):
         super().__init__(unique_id, model)
-        self.maxHashRate = maxHashRate # H/s
-        self.hashRate = maxHashRate # H/s Miner uses all its available hashRate in the beginning
-        self.hashCost = 12e-13 # e.g. Euro/H
+        r = np.random.uniform(0.7,1) 
+        # This random number is used to create variability among miners' hash rates
+        # And to set energy consumption of each miner as a consequence of its hash rate
+        self.maxHashRate = r * technologicalMaximumHashRate # H/s
+        self.hashRate = self.maxHashRate # H/s Miner uses all its available hashRate in the beginning
+        self.energyConsumption = r * 140 # W         
+        self.costPerKWh = np.random.uniform(0.05,0.20) # Euro/KWh               
+        self.energyPerHash = self.energyConsumption / self.maxHashRate # J/H        
+        self.hashCost = self.energyPerHash * (self.costPerKWh / 3600000) # e.g. Euro/H
         self.reward = 0 # e.g. BTC
         self.cost = 0 # e.g. Euro
         # DecentralizationIndexOn is the decentralizationIndex of the network
@@ -72,9 +78,8 @@ class Network(Model):
         self.schedule.add(superMiner(self))
         
         # Create miners
-        for i in range(1, self.numMiners):
-            maxHashRate = random.randrange(0, technologicalMaximumHashRate)
-            a = Miner(i, maxHashRate, self)
+        for i in range(1, self.numMiners):            
+            a = Miner(i, technologicalMaximumHashRate, self)
             # Add other miners to scheduler
             self.schedule.add(a)
         
@@ -123,7 +128,7 @@ technologicalMaximumHashRate = 20e6
 initialReward = 12.5
 steps = 10 #4320 # in the case of Bitcoin each step is about 10 minutes, 4320 steps is about 1 month     
 random.seed(1) # set the random seed in order to make an experiment repeatable
-k = 2.5 # hash rate multiplier available to super miner
+k = 10 # hash rate multiplier available to super miner
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
