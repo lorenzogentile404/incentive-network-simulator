@@ -6,12 +6,13 @@ import pysal
 import matplotlib.pyplot as plt
 
 class Miner(Agent):
-    def __init__(self, unique_id, technologicalMaximumHashRate, model):
+    def __init__(self, unique_id, k, model):
         super().__init__(unique_id, model)
         r = np.random.uniform(0.7,1) 
         # This random number is used to create variability among miners' hash rates
         # And to set energy consumption of each miner as a consequence of its hash rate
-        self.maxHashRate = r * technologicalMaximumHashRate # H/s
+        self.maxHashRate = r * self.model.technologicalMaximumHashRate * k # H/s
+        self.k = k # Available multiplier of the hashRate
         self.hashRate = self.maxHashRate # H/s Miner uses all its available hashRate in the beginning
         self.energyConsumption = r * 140 # W         
         self.costPerKWh = np.random.uniform(0.05,0.20*10) # Euro/KWh TODO remove * 10, it has been added for testing purposes          
@@ -29,6 +30,18 @@ class Miner(Agent):
     def stop(self):
         self.hashRate = 0
         print("Miner " + str(self.unique_id) + ' stop...\n')
+    
+    def sell(self, kToSell, numMinersToOffer):
+        pass
+
+    def buy(self, kToBuy, numMinersItHasBeenOffered, avgHashRateMinersItHasBeenOffered):
+        potentialMaxHashRate = self.maxHashRate * kToBuy
+        potentialTotalHashRate = self.model.totalHashRate + (-1+ kToBuy)*numMinersItHasBeenOffered*avgHashRateMinersItHasBeenOffered 
+        potentialExpectedRewardPerBlock = potentialMaxHashRate/potentialTotalHashRate*self.model.reward*self.model.currencyValueWrtFiat
+        #costPerBlock = self.maxHashRate * 10 * 60 * self.hashCost TODO compute again hashCost taking into consideration energyConsumption        
+        pass
+        #TODO if buy:
+        #self.hashRate = potentialMaxHashRate
             
     def computeExpectedProfitPerBlock(self):
         if self.model.totalHashRate > 0:
@@ -61,7 +74,8 @@ class Miner(Agent):
         
 class Network(Model):
     def __init__(self, superMiner, numMiners, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat):
-        self.numMiners = numMiners        
+        self.numMiners = numMiners
+        self.technologicalMaximumHashRate = technologicalMaximumHashRate        
         self.reward = initialReward # e.g. ETH
         self.currencyValueWrtFiat = initialCurrencyValueWrtFiat # e.g. Euro/ETH 
         self.totalHashRate = 0 # H/s
@@ -73,7 +87,7 @@ class Network(Model):
         
         # Create miners
         for i in range(1, self.numMiners):            
-            a = Miner(i, technologicalMaximumHashRate, self)
+            a = Miner(i, 1, self)
             # Add other miners to scheduler
             self.schedule.add(a)
         
@@ -137,7 +151,7 @@ np.random.seed(1) # set the random seed in order to make an experiment repeatabl
 k = 10 # hash rate multiplier available to super miner (10, 20, 59, 60. 70)
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
-superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
+superMiner = lambda model: Miner(0, k, model)
 network = Network(superMiner, numMiners, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat)
 for i in range(steps):
     print('Step ' + str(i) + '...\n')
@@ -146,8 +160,6 @@ for i in range(steps):
     print('Active miners: ', str(list(map(lambda a: a.unique_id, list(filter(lambda a: a.hashRate > 0, network.schedule.agents))))))
     if network.totalHashRate == 0:
         print('There is no more hash rate in the network.')
-
-
 
 # Plot data regarding miners using datacollector
 minersInfo = network.datacollector.get_agent_vars_dataframe()
