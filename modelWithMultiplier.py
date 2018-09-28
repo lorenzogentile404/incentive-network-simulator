@@ -84,7 +84,8 @@ class Network(Model):
         self.computeTotalHashRate()         
             
         # Declare data that have to be collected            
-        self.datacollector = DataCollector(agent_reporters={"reward": "reward", "hashRate":"hashRate"})
+        self.datacollector = DataCollector( model_reporters={"decentralizationIndex": "decentralizationIndex"},
+                                           agent_reporters={"reward": "reward", "hashRate":"hashRate"})
     
     def powPuzzle(self):
         if self.totalHashRate > 0:        
@@ -133,7 +134,7 @@ initialReward = 3 # ETH
 initialCurrencyValueWrtFiat = 0.1 # Euro
 steps = 10 #172800 # in the case of Ethereum each step is about 15 seconds, 172800 steps is about 1 month     
 np.random.seed(1) # set the random seed in order to make an experiment repeatable
-k = 70 # hash rate multiplier available to super miner (20, 59, 60. 70)
+k = 10 # hash rate multiplier available to super miner (10, 20, 59, 60. 70)
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, technologicalMaximumHashRate * k, model)
@@ -149,7 +150,7 @@ for i in range(steps):
 
 
 # Plot data regarding miners using datacollector
-minersHashRates = network.datacollector.get_agent_vars_dataframe()
+minersInfo = network.datacollector.get_agent_vars_dataframe()
 
 ind = np.arange(steps) # The x locations for the groups
 width = 0.35 # The width of the bars: can also be len(x) sequence
@@ -162,7 +163,7 @@ plt.xticks(ind, np.asarray(list(map(lambda e: str(e), ind))))
 
 # Plot hashRate of each miner for each step
 for i in range(numMiners):
-    oneMinerHashRate = minersHashRates.xs(i, level="AgentID").hashRate
+    oneMinerHashRate = minersInfo.xs(i, level="AgentID").hashRate
     if (i == 0):      
         bottom = np.array(oneMinerHashRate)
         p[i] = plt.bar(ind, oneMinerHashRate, width, color=str(i/numMiners))
@@ -171,11 +172,13 @@ for i in range(numMiners):
         bottom += np.array(oneMinerHashRate)
 
 plt.legend(np.asarray(list(map(lambda el: el[0], p))),np.asarray(list(map(lambda e: 'Min. ' +  str(e), ind))),bbox_to_anchor=(1.125, 0.8))
-            
-# Plot hashRate of each miner at the end of the simulation
-# for i in range(steps):
-#    oneStepMinersHashRates = minersHashRates.xs(i, level="Step")["hashRate"]
-#    plt.pie(oneStepMinersHashRates)
+           
+# Plot reward of each miner at the end of the simulation
+eachMinerRewardEndSimulation = minersInfo.xs(steps - 1, level="Step")["reward"]
+#eachMinerRewardEndSimulation.plot()
 
-
+# Plot decentralizationIndex of the network for each step
+networkInfo = network.datacollector.get_model_vars_dataframe()
+decentralizationIndexPerStep = networkInfo.decentralizationIndex
+#decentralizationIndexPerStep.plot()
 
