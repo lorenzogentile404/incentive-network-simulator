@@ -38,7 +38,7 @@ class Miner(Agent):
         potentialMaxHashRate = self.maxHashRate * kToBuy
         potentialTotalHashRate = self.model.totalHashRate + (-1+ kToBuy)*numMinersItHasBeenOffered*avgHashRateMinersItHasBeenOffered 
         potentialExpectedRewardPerBlock = potentialMaxHashRate/potentialTotalHashRate*self.model.reward*self.model.currencyValueWrtFiat
-        #costPerBlock = self.maxHashRate * 10 * 60 * self.hashCost TODO compute again hashCost taking into consideration energyConsumption        
+        costPerBlock = self.maxHashRate * 10 * 60 * self.hashCost # hashCost is assumed to be the same because efficiency increses
         pass
         #TODO if buy:
         #self.hashRate = potentialMaxHashRate
@@ -148,7 +148,7 @@ initialReward = 3 # ETH
 initialCurrencyValueWrtFiat = 0.1 # Euro
 steps = 10 #172800 # in the case of Ethereum each step is about 15 seconds, 172800 steps is about 1 month     
 np.random.seed(1) # set the random seed in order to make an experiment repeatable
-k = 10 # hash rate multiplier available to super miner (10, 20, 59, 60. 70)
+k = 70 # hash rate multiplier available to super miner (10, 20, 59, 60. 70)
 # superMiner parameters are changed in order to simulate different scenarios
 # note that a lambda is used because in order to initialize an agent its model is required
 superMiner = lambda model: Miner(0, k, model)
@@ -193,4 +193,9 @@ eachMinerRewardEndSimulation = minersInfo.xs(steps - 1, level="Step")["reward"]
 networkInfo = network.datacollector.get_model_vars_dataframe()
 decentralizationIndexPerStep = networkInfo.decentralizationIndex
 #decentralizationIndexPerStep.plot()
+
+# Plot number of active miners per step
+numActiveMinersPerStep = list(map(lambda step: sum(minersInfo.xs(step, level="Step")["hashRate"] > 0), range(0, steps)))
+plt.plot(numActiveMinersPerStep)
+
 
