@@ -161,19 +161,18 @@ for i in range(steps):
     if network.totalHashRate == 0:
         print('There is no more hash rate in the network.')
 
-# Plot data regarding miners using datacollector
+# Plot hash rates by step and miner
 minersInfo = network.datacollector.get_agent_vars_dataframe()
-
 ind = np.arange(steps) # The x locations for the groups
 width = 0.35 # The width of the bars: can also be len(x) sequence
 bottom = () # Useful to stake bars
 p = [0] * numMiners # Useful to create legend
 
+plt.title('Hash rates by step and miner, k = ' + str(k))
+plt.xlabel('Step')
 plt.ylabel('Hash rates')
-plt.title('Hash rates by step and miner')
 plt.xticks(ind, np.asarray(list(map(lambda e: str(e), ind))))
 
-# Plot hashRate of each miner for each step
 for i in range(numMiners):
     oneMinerHashRate = minersInfo.xs(i, level="AgentID").hashRate
     if (i == 0):      
@@ -183,19 +182,40 @@ for i in range(numMiners):
         p[i] = plt.bar(ind, oneMinerHashRate, width, color=str(i/numMiners), bottom=bottom)
         bottom += np.array(oneMinerHashRate)
 
-plt.legend(np.asarray(list(map(lambda el: el[0], p))),np.asarray(list(map(lambda e: 'Min. ' +  str(e), ind))),bbox_to_anchor=(1.125, 0.8))
+plt.legend(np.asarray(list(map(lambda el: el[0], p))),np.asarray(list(map(lambda e: 'Miner ' +  str(e), ind))),bbox_to_anchor=(1.28, 0.8))
+           
+plt.savefig('Hash rates by step and miner, k = ' + str(k),bbox_inches='tight')
+plt.clf()           
            
 # Plot reward of each miner at the end of the simulation
 eachMinerRewardEndSimulation = minersInfo.xs(steps - 1, level="Step")["reward"]
-#eachMinerRewardEndSimulation.plot()
+plt.title('Reward of each miner at the end of the simulation, k = ' + str(k))
+plt.xlabel('Miner')
+plt.ylabel('Reward')
+plt.plot(eachMinerRewardEndSimulation)
+
+plt.savefig('Reward of each miner at the end of the simulation, k = ' + str(k))
+plt.clf()   
 
 # Plot decentralizationIndex of the network for each step
 networkInfo = network.datacollector.get_model_vars_dataframe()
 decentralizationIndexPerStep = networkInfo.decentralizationIndex
-#decentralizationIndexPerStep.plot()
+plt.title('decentralizationIndex of the network for each step, k = ' + str(k))
+plt.xlabel('Step')
+plt.ylabel('decentralizationIndex')
+plt.plot(decentralizationIndexPerStep)
+
+plt.savefig('decentralizationIndex of the network for each step, k = ' + str(k))
+plt.clf()   
 
 # Plot number of active miners per step
 numActiveMinersPerStep = list(map(lambda step: sum(minersInfo.xs(step, level="Step")["hashRate"] > 0), range(0, steps)))
+plt.title('Number of active miners per step, k = ' + str(k))
+plt.xlabel('Step')
+plt.ylabel('Number of active miners')
 plt.plot(numActiveMinersPerStep)
+
+plt.savefig('Number of active miners per step, k = ' + str(k))
+plt.clf()   
 
 
