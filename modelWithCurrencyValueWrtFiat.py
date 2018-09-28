@@ -128,8 +128,8 @@ for i in range(steps):
 minersRewards = network.datacollector.get_agent_vars_dataframe()
 # Plot reward of each miner for each step
 for i in range(numMiners):
-    oneMinerReward = minersRewards.xs(i, level="AgentID")
-    #oneMinerReward.reward.plot()
+    oneMinerReward = minersRewards.xs(i, level="AgentID").reward
+    #oneMinerReward.plot()
     
 # Plot reward of each miner at the end of the simulation
 endMinersRewards = minersRewards.xs(steps - 1, level="Step")["reward"]
