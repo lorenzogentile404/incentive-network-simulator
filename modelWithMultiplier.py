@@ -1,5 +1,5 @@
 from mesa import Agent, Model
-from mesa.time import SimultaneousActivation
+from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 import numpy as np
 import pysal
@@ -63,14 +63,13 @@ class Miner(Agent):
 
         # Here all data to selected a policy are computed
         print('miner:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',profit:', self.profit, ',expectedProfitPerBlock:', self.expectedProfitPerBlock, '\n')
-                
-    def advance(self):
-        # Miners' policies are executed "at the same time"
-        # Each miner does not selected a policy taking into consideration the policies selected by others
+        
+        # Miners' policies are executed in a random order
+        # Each miner select a policy taking into consideration policies selected by other miners before him 
         if (self.hashRate == 0 and self.expectedProfitPerBlock > 0):
             self.start()
         elif (self.hashRate > 0 and (self.expectedProfitPerBlock <= 0 or len(list(filter(lambda a: a.unique_id != self.unique_id and a.hashRate > 0, self.model.schedule.agents))) == 0)):
-            self.stop()
+            self.stop()                
         
 class Network(Model):
     def __init__(self, superMiner, numMiners, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat):
@@ -80,7 +79,7 @@ class Network(Model):
         self.currencyValueWrtFiat = initialCurrencyValueWrtFiat # e.g. Euro/ETH 
         self.totalHashRate = 0 # H/s
         self.decentralizationIndex = 0
-        self.schedule = SimultaneousActivation(self)
+        self.schedule = RandomActivation(self)
                 
         # Add super miner to scheduler
         self.schedule.add(superMiner(self))
@@ -113,9 +112,8 @@ class Network(Model):
     def computeTotalHashRate(self):
          self.totalHashRate = sum(list(map(lambda a: a.hashRate, self.schedule.agents)))
         
-    def computeDecentralizationIndex(self):    
-        activeMiners = list(filter(lambda a: a.hashRate > 0, self.schedule.agents))          
-        hashRates = list(map(lambda a: a.hashRate, activeMiners))   
+    def computeDecentralizationIndex(self):             
+        hashRates = list(map(lambda a: a.hashRate, self.schedule.agents))   
         # As a decentralizationIndex 1 - gini indix is used
         # the higher it is, the more the hashRate is distributed equally among miners 
         self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
@@ -136,8 +134,6 @@ class Network(Model):
         self.computeDecentralizationIndex()
         # TODO Update currency value with respect to fiat
         # self.computeCurrencyValueWrtFiat()
-
-        
 
 # Run the simulation
 # https://etherscan.io/chart/hashrate
