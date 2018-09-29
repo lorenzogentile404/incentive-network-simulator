@@ -15,7 +15,7 @@ class MiningPool(Agent):
         self.maxCumulativeHashRate = self.singleMachineHashRate * m # H/s
         self.k = k # Available multiplier of the singleMachineHashRate
         self.cumulativeHashRate = self.maxCumulativeHashRate # H/s Mining pool uses all its available hashRate in the beginning
-        self.energyConsumption = r * 1400 * m # W         
+        self.energyConsumption = r * 1400 * m # W Each machine is supposed to have 10 units with a energy consumption of 140 W         
         self.costPerKWh = np.random.uniform(0.05,0.20) # Euro/KWh
         self.energyPerHash = self.energyConsumption / self.maxCumulativeHashRate # J/H        
         self.hashCost = self.energyPerHash * (self.costPerKWh / 3600000) # e.g. Euro/H
@@ -44,7 +44,7 @@ class MiningPool(Agent):
         # If no mining pool is active
         else:
             expectedRewardPerBlock = self.model.reward
-        costPerBlock = self.maxCumulativeHashRate * 15 * self.hashCost 
+        costPerBlock = self.maxCumulativeHashRate * self.model.blockTime * self.hashCost 
         self.expectedProfitPerBlock =  expectedRewardPerBlock - costPerBlock
                      
     def step(self):    
@@ -52,7 +52,7 @@ class MiningPool(Agent):
         self.computeExpectedProfitPerBlock()
         
         # Pay energy to compute hash
-        self.cost += self.cumulativeHashRate * 15 * self.hashCost 
+        self.cost += self.cumulativeHashRate * self.model.blockTime * self.hashCost 
         
         # Compute profit
         self.profit = self.reward * self.model.currencyValueWrtFiat - self.cost
@@ -68,10 +68,11 @@ class MiningPool(Agent):
             self.stop()                
         
 class Network(Model):
-    def __init__(self, superMiningPool, numMiningPools, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat):
+    def __init__(self, superMiningPool, numMiningPools, technologicalMaximumHashRate, initialReward, blockTime, initialCurrencyValueWrtFiat):
         self.numMiningPools = numMiningPools
         self.technologicalMaximumHashRate = technologicalMaximumHashRate        
         self.reward = initialReward # e.g. ETH
+        self.blockTime = blockTime # s
         self.currencyValueWrtFiat = initialCurrencyValueWrtFiat # e.g. Euro/ETH 
         self.totalHashRate = 0 # H/s
         self.decentralizationIndex = 0
@@ -144,13 +145,14 @@ for m in (100, 1000, 10000, 100000, 1000000):
         numMiningPools = 10
         technologicalMaximumHashRate = 300e6 # 30 MH/s per 10 units
         initialReward = 3 # ETH
-        initialCurrencyValueWrtFiat = 200 # Euro
+        blockTime = 15 # s
+        initialCurrencyValueWrtFiat = 200 # Euro        
         steps = 10 #172800 # in the case of Ethereum each step is about 15 seconds, 172800 steps is about 1 month     
         np.random.seed(1) # set the random seed in order to make an experiment repeatable
         # superMiningPool parameters are changed in order to simulate different scenarios
         # note that a lambda is used because in order to initialize an agent its model is required
         superMiningPool = lambda model: MiningPool(0, k, m, model)
-        network = Network(superMiningPool, numMiningPools, technologicalMaximumHashRate, initialReward, initialCurrencyValueWrtFiat)
+        network = Network(superMiningPool, numMiningPools, technologicalMaximumHashRate, initialReward, blockTime, initialCurrencyValueWrtFiat)
         for i in range(steps):
             print('Step ' + str(i) + '...\n')
             network.step()
