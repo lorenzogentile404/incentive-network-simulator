@@ -133,9 +133,9 @@ class Network(Model):
         # self.computeCurrencyValueWrtFiat()
 
 # number of machines super mining pool could decide to use
-for m in (100, 1000, 10000, 100000, 1000000):
+for m in (100, 1000):#, 10000, 100000, 1000000):
     # hash rate multiplier available to super mining pool
-    for k in (1, 10, 100, 1000):
+    for k in (1, 10):#, 100, 1000):
         # Run the simulation
         # https://etherscan.io/chart/hashrate
         # 28/09/2018 totalHashRate = 266 TH/s 
@@ -168,7 +168,7 @@ for m in (100, 1000, 10000, 100000, 1000000):
         bottom = () # Useful to stake bars
         p = [0] * numMiningPools # Useful to create legend
         
-        plt.title('Cumulative hash rates by step and mining pool, m = ' + str(m) + ', k = ' + str(k))
+        plt.title('Cumulative hash rates by step and mining pool, m = ' + str(m) + ', k = ' + str(k), y=1.08)
         plt.xlabel('Step')
         plt.ylabel('Cumulative hash rates')
         plt.xticks(ind, np.asarray(list(map(lambda e: str(e), ind))))
@@ -189,35 +189,35 @@ for m in (100, 1000, 10000, 100000, 1000000):
                    
         # Plot reward per mining pool at simulation\'s end
         eachMiningPoolRewardEndSimulation = miningPoolsInfo.xs(steps - 1, level="Step")["reward"]
-        plt.title('Reward per mining pool at simulation\'s end, m = ' + str(m) + ', k = ' + str(k))
+        plt.title('Reward per mining pool at simulation\'s end, m = ' + str(m) + ', k = ' + str(k), y=1.08)
         plt.xlabel('Mining pool')
         plt.ylabel('Reward')
         plt.plot(eachMiningPoolRewardEndSimulation)
         
-        plt.savefig('plots/Reward per mining pool at simulation\'s end, m = ' + str(m) + ', k = ' + str(k))
+        plt.savefig('plots/Reward per mining pool at simulation\'s end, m = ' + str(m) + ', k = ' + str(k), bbox_inches='tight')
         plt.clf()   
         
         # Plot decentralizationIndex per step
         networkInfo = network.datacollector.get_model_vars_dataframe()
         decentralizationIndexPerStep = networkInfo.decentralizationIndex
-        plt.title('decentralizationIndex per step, m = ' + str(m) + ', k = ' + str(k))
+        plt.title('decentralizationIndex per step, m = ' + str(m) + ', k = ' + str(k), y=1.08)
         plt.xlabel('Step')
         plt.ylabel('decentralizationIndex')
         plt.ylim(0,1)
         plt.plot(decentralizationIndexPerStep)
         
-        plt.savefig('plots/decentralizationIndex per step, m = ' + str(m) + ', k = ' + str(k))
+        plt.savefig('plots/decentralizationIndex per step, m = ' + str(m) + ', k = ' + str(k), bbox_inches='tight')
         plt.clf()   
         
         # Plot number of active mining pools per step
         numActiveMiningPoolsPerStep = list(map(lambda step: sum(miningPoolsInfo.xs(step, level="Step")["cumulativeHashRate"] > 0), range(0, steps)))
-        plt.title('Number active mining pools per step, m = ' + str(m) + ', k = ' + str(k))
+        plt.title('Number active mining pools per step, m = ' + str(m) + ', k = ' + str(k), y=1.08)
         plt.xlabel('Step')
         plt.ylabel('Number of active mining pools')
         plt.ylim(0,numMiningPools)
         plt.plot(numActiveMiningPoolsPerStep)
         
-        plt.savefig('plots/Number active mining pools per step, m = ' + str(m) + ', k = ' + str(k))
+        plt.savefig('plots/Number active mining pools per step, m = ' + str(m) + ', k = ' + str(k), bbox_inches='tight')
         plt.clf()   
 
 
