@@ -26,11 +26,11 @@ class MiningPool(Agent):
         
     def start(self):
         self.hashRate = self.maxHashRate
-        print("Mining pool " + str(self.unique_id) + ' start...\n')
+        #print("Mining pool " + str(self.unique_id) + ' start...\n')
         
     def stop(self):
         self.hashRate = 0
-        print("Mining pool " + str(self.unique_id) + ' stop...\n')
+        #print("Mining pool " + str(self.unique_id) + ' stop...\n')
                 
     def computeExpectedProfitPerBlock(self):
         # If at least one mining pool is active
@@ -58,7 +58,7 @@ class MiningPool(Agent):
         self.profit = self.reward * self.model.currencyValueWrtFiat - self.cost
 
         # Here all data to selected a policy are computed
-        print('mining pool:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',profit:', self.profit, ',expectedProfitPerBlock:', self.expectedProfitPerBlock, '\n')
+        #print('mining pool:', self.unique_id, ',hashRate:', self.hashRate, ',reward:', self.reward, ',cost:', self.cost, ',profit:', self.profit, ',expectedProfitPerBlock:', self.expectedProfitPerBlock, '\n')
         
         # Mining pools' policies are executed in a random order
         # Each mining pool select a policy taking into consideration policies selected by other mining pools before him 
@@ -119,7 +119,7 @@ class Network(Model):
         # As a decentralizationIndex 1 - gini indix is used
         # the higher it is, the more the hashRates is distributed equally among mining pools 
         self.decentralizationIndex = 1 - pysal.inequality.gini.Gini(hashRates).g
-        print('### Decentralization index: ', self.decentralizationIndex, '\n')
+        #print('### Decentralization index: ', self.decentralizationIndex, '\n')
         
 #     def computeCurrencyValueWrtFiat(self): 
 #         pass
