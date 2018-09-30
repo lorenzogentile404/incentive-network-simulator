@@ -86,7 +86,8 @@ class Network(Model):
         # Create mining pools
         for i in range(1, self.numMiningPools):
             k = 1
-            m = np.random.uniform(self.averageNumMachinePerMiningPool * 0.5, self.averageNumMachinePerMiningPool * 1.5)           
+            percentageDeviationFromAverageNumMachinePerMiningPool = 0.7
+            m = np.random.uniform(self.averageNumMachinePerMiningPool * (1 - percentageDeviationFromAverageNumMachinePerMiningPool), self.averageNumMachinePerMiningPool * (1 + percentageDeviationFromAverageNumMachinePerMiningPool))           
             a = MiningPool(i, k, m, self)
             # Add other mining pools to scheduler
             self.schedule.add(a)
@@ -136,7 +137,7 @@ class Network(Model):
         # self.computeCurrencyValueWrtFiat()
 
 # number of machines super mining pool could decide to use (100, 1000, 10000, 100000, 1000000)
-for m in (1000, 10000, 100000, 1000000):
+for m in (100, 1000, 10000, 100000, 1000000):
     # hash rate multiplier available to super mining pool (1, 10, 100, 1000)
     for k in (1, 10, 100, 1000):
         # Run the simulation
