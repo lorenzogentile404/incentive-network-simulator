@@ -3,7 +3,6 @@ from modelWithMultiplierAndNumberOfMachines import *
 mBreakdown = [] 
 kBreakdown = []
 
-
 for k in range(1,1000):
     m = 1000
     while True:

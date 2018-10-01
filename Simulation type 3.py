@@ -3,8 +3,7 @@ from modelWithMultiplierAndNumberOfMachines import *
 mBreakdown = [] 
 kBreakdown = []
 
-
-for k in range(1,50,2):
+for k in range(1,1000,10):
     m = 1000
     while True:
         # Run the simulation
@@ -26,7 +25,7 @@ for k in range(1,50,2):
         blockTime = 15 # s
         initialCurrencyValueWrtFiat = 200 # Euro        
         steps = 10 # In the case of Ethereum each step is about 15 seconds, 172800 steps is about 1 month     
-        #np.random.seed(1) # TODO Investigate why plots with seed equal to 1 and 2 have different shape for low k
+        np.random.seed(1) # TODO Investigate why plots with seed equal to 1 and 2 have different shape for low k
         # superMiningPool parameters are changed in order to simulate different scenarios
         # note that a lambda is used because in order to initialize an agent its model is required
         superMiningPool = lambda model: MiningPool(0, k, m, model)
