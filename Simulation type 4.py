@@ -89,6 +89,6 @@ plt.ylabel('m')
 plt.plot(kBreakdown2, mBreakdown2, label='1')  
 plt.plot(kBreakdown3, mBreakdown3, label='2')
 plt.legend()
-plt.savefig('plots/Intersection 2 and 3', bbox_inches='tight')
+plt.savefig('plots/Only super mining pool is active (1) and no mining pool is active (2) for m and k', bbox_inches='tight')
 plt.clf()   
 
