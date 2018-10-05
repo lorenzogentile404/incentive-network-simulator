@@ -1,1 +1,4 @@
 # incentive-network-simulator
+
+In proof of work blockchain systems, there are strong incentives towards designing hardware that can mine faster and/or with less power consumption. There are two ways of taking advantage of such devices: one can use them to mine more coins with less power, or he can sell it to other miners. The two strategies are not independent, of course: if everybody has the boosting technology, the difficulty will rise, and it won't be an advantage anymore. On the other hand, if the boost is above a certain threshold, being used only by a small subset of miners might mean centralizing the system, with potentially dangerous consequences on the platform credibility. 
+With this simulator it is possible to analyse the impact of different strategies to exploit a significant increase in mining hardware efficiency.
